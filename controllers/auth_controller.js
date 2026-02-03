@@ -55,7 +55,7 @@ export const login = async (req, res) => {
         // GUARDAMOS TOKEN EN UNA COOKIE
         res.cookie('token', token)
 
-        res.json({ 
+        res.json({
             _id: userFound._id,
             username: userFound.username,
             email: userFound.email,
@@ -67,7 +67,7 @@ export const login = async (req, res) => {
     }
 };
 
-export const logout = (req, res) => { 
+export const logout = (req, res) => {
     // VACIAMOS LA COOKIE
     res.cookie('token', '', {
 
@@ -77,4 +77,27 @@ export const logout = (req, res) => {
 
     //OK
     return res.sendStatus(200);
+};
+
+export const profile = async (req, res) => {
+    try {
+        // Buscamos al usuario por el id que dio la funcion authRequired
+        const userFound = await User.findById(req.user.id);
+
+        if (!userFound) {
+            return res.status(400).json({ message: 'User not found' });
+        }
+
+        // Si todo sale bien, devolvemos los datos
+        return res.json({
+            id: userFound._id,
+            username: userFound.username,
+            email: userFound.email,
+            createdAt: userFound.createdAt,
+            updatedAt: userFound.updatedAt
+        });
+
+    } catch (error) {
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
 };
