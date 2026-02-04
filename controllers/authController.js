@@ -18,7 +18,7 @@ export const register = async (req, res) => {
         const userSaved = await newUser.save();
 
         // GENERAMOS TOKEN CON EL ID
-        const token = await createAccessToken({ id: userSaved._id });
+        const token = await createAccessToken({ id: userSaved._id , role: userSaved.role});
 
         // GUARDAMOS TOKEN EN UNA COOKIE
         res.cookie('token', token)
@@ -50,7 +50,7 @@ export const login = async (req, res) => {
         if (!isMatch) return res.status(400).json({ message: 'Invalid password' });
 
         // GENERAMOS TOKEN CON EL ID
-        const token = await createAccessToken({ id: userFound._id });
+        const token = await createAccessToken({ id: userFound._id , role: userFound.role});
 
         // GUARDAMOS TOKEN EN UNA COOKIE
         res.cookie('token', token)

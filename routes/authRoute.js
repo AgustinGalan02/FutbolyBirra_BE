@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import {login, register, logout, profile} from '../controllers/auth_controller.js';
+import {login, register, logout, profile} from '../controllers/authController.js';
 import { authRequired } from '../middlewares/validateToken.js';
 
 const router = Router();
