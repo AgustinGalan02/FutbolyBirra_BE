@@ -15,7 +15,7 @@ export const registerSchema = z.object({
     .min(6, {
         message: 'Password must be at least 6 characters long'
     }),
-    team: z.string().optional(),
+    team: z.union([z.string(), z.number()]).optional(),
     role: z.string({
         required_error: 'Role is required'
     }).optional()

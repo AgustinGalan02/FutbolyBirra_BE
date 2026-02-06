@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { createAccessToken } from '../libs/jwt.js'
 
 export const register = async (req, res) => {
-    const { username, email, password } = req.body;
+    const { username, email, password, team } = req.body;
 
     try {
         // ENCRIPTAMOS
@@ -13,7 +13,8 @@ export const register = async (req, res) => {
         const newUser = new User({
             username,
             email,
-            password: passwordHash
+            password: passwordHash,
+            team
         });
         const userSaved = await newUser.save();
 
@@ -28,7 +29,8 @@ export const register = async (req, res) => {
             username: userSaved.username,
             email: userSaved.email,
             createdAt: userSaved.createdAt,
-            updateAt: userSaved.updatedAt
+            updateAt: userSaved.updatedAt,
+            team: userSaved.team
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
