@@ -6,6 +6,24 @@ export const register = async (req, res) => {
     const { username, email, password, team } = req.body;
 
     try {
+
+        const userFound = await User.findOne({ email });
+        if (userFound) {
+            return res.status(400).json([{
+                field: "email",
+                message: "Email ya registrado"
+            }])
+        }
+
+        const usernameFound = await User.findOne({ username });
+        if (usernameFound) {
+            return res.status(400).json([{
+                field: "username",
+                message: "Usuario ya registrado"
+            }])
+        }
+
+
         // ENCRIPTAMOS
         const passwordHash = await bcrypt.hash(password, 10)
 
@@ -19,7 +37,7 @@ export const register = async (req, res) => {
         const userSaved = await newUser.save();
 
         // GENERAMOS TOKEN CON EL ID
-        const token = await createAccessToken({ id: userSaved._id , role: userSaved.role});
+        const token = await createAccessToken({ id: userSaved._id, role: userSaved.role });
 
         // GUARDAMOS TOKEN EN UNA COOKIE
         res.cookie('token', token)
@@ -43,16 +61,22 @@ export const login = async (req, res) => {
     try {
         // BUSCAMOS USUARIO
         const userFound = await User.findOne({ email });
-        if (!userFound) return res.status(400).json({ message: 'User not found' });
+        if (!userFound) return res.status(400).json([{
+            field: 'email',
+            message: 'Email no registrado'
+        }]);
 
 
         // COMPARAMOS CONTRASEÑA CON EL TOKEN
         const isMatch = await bcrypt.compare(password, userFound.password);
 
-        if (!isMatch) return res.status(400).json({ message: 'Invalid password' });
+        if (!isMatch) return res.status(400).json([{
+            field: 'password',
+            message: 'Contraseña Incorrecta'
+        }]);
 
         // GENERAMOS TOKEN CON EL ID
-        const token = await createAccessToken({ id: userFound._id , role: userFound.role});
+        const token = await createAccessToken({ id: userFound._id, role: userFound.role });
 
         // GUARDAMOS TOKEN EN UNA COOKIE
         res.cookie('token', token)

@@ -1,21 +1,29 @@
-import {z} from 'zod'
+import { z } from 'zod'
 
 export const registerSchema = z.object({
     username: z.string({
-        required_error: 'Username is required'
-    }),
+        required_error: 'Ingresar usuario'
+    })
+        .min(1, {
+            message: 'Ingresar usuario'
+        }),
     email: z.string({
-        required_error: 'Email is required'
+        required_error: 'Ingresar email'
     }).email({
-        message: 'Invalid email address'
+        message: 'Ingresar email'
     }),
     password: z.string({
-        required_error: 'Password is required'
+        required_error: 'Ingresar contraseña'
     })
-    .min(6, {
-        message: 'Password must be at least 6 characters long'
-    }),
-    team: z.union([z.string(), z.number()]).optional(),
+        .min(1, {
+            message: 'Ingresar contraseña'
+        })
+        .min(6, {
+            message: 'La contraseña debe tener mas de 6 caracteres'
+        }),
+    team: z
+        .string({ required_error: "Debés elegir un equipo" })
+        .min(1, "Debés elegir un equipo"),
     role: z.string({
         required_error: 'Role is required'
     }).optional()
@@ -24,13 +32,16 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
     email: z.string({
-        required_error: 'Email is required'
+        required_error: 'Ingresar email'
     }).email({
-        message: 'Invalid email address'
-    }),
+        message: 'Ingresar email'
+    })
+        .min(1, {
+            message: 'Email no registrado'
+        }),
     password: z.string({
-        required_error: 'Password is required'
+        required_error: 'Ingresar contraseña'
     }).min(6, {
-        message: 'Password must be at least 6 characters long'
+        message: 'La contraseña debe tener mas de 6 caracteres'
     })
 })
