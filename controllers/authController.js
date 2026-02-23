@@ -1,6 +1,12 @@
 import User from '../models/user.js';
 import bcrypt from 'bcryptjs';
 import { createAccessToken } from '../libs/jwt.js'
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const secretKey = process.env.TOKEN_SECRET;
 
 export const register = async (req, res) => {
     const { username, email, password, team } = req.body;
@@ -126,4 +132,23 @@ export const profile = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: 'Internal Server Error' });
     }
+};
+
+export const verifyToken = async (req, res) => { // OBTENEMOS EL TOKEN DE LAS COOKIES
+    const { token } = req.cookies;
+
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+    jwt.verify(token, secretKey, async (err, user) => {
+        if (err) return res.status(401).json({ message: 'Unauthorized' });
+
+        const userFound = await User.findById(user.id);
+        if (!userFound) return res.status(401).json({ message: 'Unauthorized' });
+
+        return res.json({
+            id: userFound._id,
+            username: userFound.username,
+            email: userFound.email,
+        });
+    });
 };
