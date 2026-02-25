@@ -15,7 +15,10 @@ export const getPosts = async (req, res) => {
 export const getPostById = async (req, res) => {
     try {
         const { id } = req.params;
-        const post = await Post.findById(id);
+        const post = await Post.findById(id)
+        .populate('author', 'username team')
+        .populate('category', 'title'); 
+        
         if (!post) return res.status(404).json({ message: "Post not found" });
         res.json(post);
     } catch (error) {
@@ -28,6 +31,19 @@ export const getPostsByUser = async (req, res) => {
     try {
         const { userId } = req.params;
         const posts = await Post.find({ author: userId }).sort({ createdAt: -1 });
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// GET posts by category
+export const getPostsByCategory = async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+        const posts = await Post.find({ category: categoryId })
+            .populate('author', 'username team')
+            .sort({ createdAt: -1 }); // los mas nuevos primero
         res.json(posts);
     } catch (error) {
         res.status(500).json({ error: error.message });
