@@ -88,11 +88,12 @@ export const login = async (req, res) => {
         res.cookie('token', token)
 
         res.json({
-            _id: userFound._id,
+            id: userFound._id,
             username: userFound.username,
             email: userFound.email,
+            team: userFound.team,
             createdAt: userFound.createdAt,
-            updateAt: userFound.updatedAt
+            updatedAt: userFound.updatedAt
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -125,6 +126,7 @@ export const profile = async (req, res) => {
             id: userFound._id,
             username: userFound.username,
             email: userFound.email,
+            team: userFound.team,
             createdAt: userFound.createdAt,
             updatedAt: userFound.updatedAt
         });
@@ -149,6 +151,7 @@ export const verifyToken = async (req, res) => { // OBTENEMOS EL TOKEN DE LAS CO
             id: userFound._id,
             username: userFound.username,
             email: userFound.email,
+            team: userFound.team,
         });
     });
 };

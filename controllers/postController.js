@@ -23,6 +23,17 @@ export const getPostById = async (req, res) => {
     }
 };
 
+// GET posts by user
+export const getPostsByUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const posts = await Post.find({ author: userId }).sort({ createdAt: -1 });
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 
 // POST
 export const createPost = async (req, res) => {
