@@ -152,6 +152,7 @@ export const verifyToken = async (req, res) => { // OBTENEMOS EL TOKEN DE LAS CO
             username: userFound.username,
             email: userFound.email,
             team: userFound.team,
+            role: userFound.role
         });
     });
 };

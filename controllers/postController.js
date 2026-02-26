@@ -1,4 +1,5 @@
 import Post from '../models/Post.js';
+import Comment from "../models/comment.js";
 
 // GET
 export const getPosts = async (req, res) => {
@@ -70,19 +71,25 @@ export const createPost = async (req, res) => {
 
 // DELETE
 export const deletePost = async (req, res) => {
-    try {
-        const post = await Post.findById(req.params.id);
-        if (!post) return res.status(404).json({ message: "Post no encontrado" });
-
-        if (post.author.toString() !== req.user.id && req.user.role !== 'admin') {
-            return res.status(403).json({ message: "No tenés permiso para borrar este post" });
-        }
-
-        await Post.findByIdAndDelete(req.params.id);
-        res.sendStatus(204);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post no encontrado" });
+    
+    if (post.author.toString() !== req.user.id) {
+        return res.status(403).json({ message: "No autorizado" });
     }
+
+    // --- BORRADO EN CASCADA ---
+    // Borra todos los comentarios donde el campo 'post' coincida con el ID del post actual
+    await Comment.deleteMany({ post: req.params.id });
+
+    // Ahora borramos el post
+    await Post.findByIdAndDelete(req.params.id);
+
+    return res.sendStatus(204);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 // PUT
