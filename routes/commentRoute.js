@@ -6,8 +6,8 @@ import { createComment, getCommentsByPost, getCommentsByUser, deleteComment } fr
 
 const router = Router();
 
-router.get('/comments/user/:userId', authRequired, getCommentsByUser);
-router.get('/comments/:postId', authRequired, getCommentsByPost);
+router.get('/comments/user/:userId', getCommentsByUser);
+router.get('/comments/:postId', getCommentsByPost);
 router.post('/comments', authRequired, validateSchema(createCommentSchema), createComment);
 router.delete('/comments/:id', authRequired, deleteComment);
 

@@ -6,10 +6,10 @@ import { getPosts, createPost, updatePost, deletePost, getPostById, getPostsByUs
 
 const router = Router();
 
-router.get('/posts', authRequired, getPosts);
-router.get('/posts/user/:userId', authRequired, getPostsByUser);
-router.get('/posts/category/:categoryId', authRequired, getPostsByCategory);
-router.get('/posts/:id', authRequired, getPostById);
+router.get('/posts', getPosts);
+router.get('/posts/user/:userId', getPostsByUser);
+router.get('/posts/category/:categoryId', getPostsByCategory);
+router.get('/posts/:id', getPostById);
 router.post('/posts', authRequired, validateSchema(createPostSchema), createPost);
 router.put('/posts/:id', authRequired, validateSchema(updatePostSchema), updatePost);
 router.delete('/posts/:id', authRequired, deletePost);
