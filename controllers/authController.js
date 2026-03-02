@@ -2,9 +2,9 @@ import User from '../models/user.js';
 import bcrypt from 'bcryptjs';
 import { createAccessToken } from '../libs/jwt.js'
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+// import dotenv from 'dotenv';
 
-dotenv.config();
+// dotenv.config();
 
 const secretKey = process.env.TOKEN_SECRET;
 
