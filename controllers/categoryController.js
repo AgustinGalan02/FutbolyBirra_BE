@@ -1,5 +1,5 @@
-import Category from '../models/Category.js';
-import Post from '../models/Post.js';
+import Category from '../models/category.js';
+import Post from '../models/post.js';
 
 //POST
 export const createCategory = async (req, res) => {
