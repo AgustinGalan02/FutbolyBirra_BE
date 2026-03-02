@@ -8,6 +8,13 @@ dotenv.config();
 
 const secretKey = process.env.TOKEN_SECRET;
 
+const getCookieOptions = () => ({
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000
+});
+
 export const register = async (req, res) => {
     const { username, email, password, team } = req.body;
 
@@ -46,7 +53,7 @@ export const register = async (req, res) => {
         const token = await createAccessToken({ id: userSaved._id, role: userSaved.role });
 
         // GUARDAMOS TOKEN EN UNA COOKIE
-        res.cookie('token', token)
+        res.cookie('token', token, getCookieOptions());
 
         res.json({ // devuelve solo datos necesarios del usuario
             _id: userSaved._id,
@@ -85,7 +92,7 @@ export const login = async (req, res) => {
         const token = await createAccessToken({ id: userFound._id, role: userFound.role });
 
         // GUARDAMOS TOKEN EN UNA COOKIE
-        res.cookie('token', token)
+        res.cookie('token', token, getCookieOptions());
 
         res.json({
             id: userFound._id,
@@ -103,7 +110,9 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
     // VACIAMOS LA COOKIE
     res.cookie('token', '', {
-
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         // PARA QUE CADUQUE INMEDIATAMENTE
         expires: new Date(0)
     });

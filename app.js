@@ -9,10 +9,22 @@ import commentRoutes from './routes/commentRoute.js';
 
 const app = express();
 
+const allowedOrigins = [
+    'http://localhost:5173',
+    process.env.FRONTEND_URL
+];
+
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
+
 app.use(morgan('dev')); // para ver las peticiones en consola
 app.use(express.json()); // para que express entienda json en las peticiones
 app.use(cookieParser()); // para leer cookies
