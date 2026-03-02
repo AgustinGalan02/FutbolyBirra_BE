@@ -99,6 +99,7 @@ export const login = async (req, res) => {
             username: userFound.username,
             email: userFound.email,
             team: userFound.team,
+            role: userFound.role,
             createdAt: userFound.createdAt,
             updatedAt: userFound.updatedAt
         });
@@ -136,6 +137,7 @@ export const profile = async (req, res) => {
             username: userFound.username,
             email: userFound.email,
             team: userFound.team,
+            role: userFound.role,
             createdAt: userFound.createdAt,
             updatedAt: userFound.updatedAt
         });
