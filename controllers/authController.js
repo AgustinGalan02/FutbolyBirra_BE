@@ -56,7 +56,7 @@ export const register = async (req, res) => {
         res.cookie('token', token, getCookieOptions());
 
         res.json({ // devuelve solo datos necesarios del usuario
-            _id: userSaved._id,
+            id: userSaved._id,
             username: userSaved.username,
             email: userSaved.email,
             createdAt: userSaved.createdAt,

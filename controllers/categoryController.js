@@ -15,28 +15,33 @@ export const createCategory = async (req, res) => {
 
 //GET
 export const getCategories = async (req, res) => {
-    try {
-        const categories = await Category.find();
-        const categoriesWithLastPost = await Promise.all(
-            categories.map(async (cat) => {
-                // Buscamos el post más reciente que coincida con esta categoria
-                const lastPost = await Post.findOne({ category: cat._id })
-                    .sort({ createdAt: -1 }) // Ordenar por fecha (descendente)
-                    .populate('author', 'username'); // Traer el nombre del autor
+  try {
+    const categories = await Category.find();
 
-                return {
-                    ...cat._doc,
-                    lastPostTitle: lastPost ? lastPost.title : null,
-                    lastPostAuthor: lastPost ? lastPost.author.username : null,
-                    lastPostDate: lastPost ? lastPost.createdAt : null,
-                };
-            })
-        );
+    const categoriesWithLastPost = await Promise.all(
+      categories.map(async (cat) => {
+        // contador de posts por categoría
+        const postCount = await Post.countDocuments({ category: cat._id });
 
-        res.json(categoriesWithLastPost);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+        // Buscamos el post más reciente que coincida con esta categoria
+        const lastPost = await Post.findOne({ category: cat._id })
+          .sort({ createdAt: -1 })
+          .populate('author', 'username');
+
+        return {
+          ...cat._doc,
+          postCount,
+          lastPostTitle: lastPost ? lastPost.title : null,
+          lastPostAuthor: lastPost ? lastPost.author.username : null,
+          lastPostDate: lastPost ? lastPost.createdAt : null,
+        };
+      })
+    );
+
+    res.json(categoriesWithLastPost);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const getCategoriesById = async (req, res) => {
