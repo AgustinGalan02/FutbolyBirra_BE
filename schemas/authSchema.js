@@ -4,31 +4,26 @@ export const registerSchema = z.object({
     username: z.string({
         required_error: 'Ingresar usuario'
     })
-        .min(3, {
-            message: 'El usuario debe tener al menos 3 caracteres'
-        })
-        .max(20, {
-            message: 'El usuario no puede tener más de 20 caracteres'
-        })
+        .min(1, { message: 'El usuario no puede estar vacío' })
+        .min(3, { message: 'El usuario debe tener al menos 3 caracteres' })
+        .max(20, { message: 'El usuario no puede tener más de 20 caracteres' })
         .regex(/^[a-zA-Z0-9_]+$/, {
             message: 'El usuario solo puede contener letras, números y guiones bajos (sin espacios)'
-        }),
+        })
+        .transform(val => val.trim()),
     email: z.string({
         required_error: 'Ingresar email'
     })
-        .email({
-            message: 'Ingresar un email válido'
-        })
-        .toLowerCase(),
+        .min(1, { message: 'El email no puede estar vacío' })
+        .email({ message: 'Ingresar un email válido' })
+        .toLowerCase()
+        .transform(val => val.trim()),
     password: z.string({
         required_error: 'Ingresar contraseña'
     })
-        .min(6, {
-            message: 'La contraseña debe tener al menos 6 caracteres'
-        })
-        .max(50, {
-            message: 'La contraseña no puede tener más de 50 caracteres'
-        }),
+        .min(1, { message: 'La contraseña no puede estar vacía' })
+        .min(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
+        .max(50, { message: 'La contraseña no puede tener más de 50 caracteres' }),
     team: z.string({
         required_error: "Tenés que elegir un equipo"
     })
@@ -40,14 +35,13 @@ export const loginSchema = z.object({
     email: z.string({
         required_error: 'Ingresar email'
     })
-        .email({
-            message: 'Ingresar un email válido'
-        })
-        .toLowerCase(),
+        .min(1, { message: 'El email no puede estar vacío' })
+        .email({ message: 'Ingresar un email válido' })
+        .toLowerCase()
+        .transform(val => val.trim()),
     password: z.string({
         required_error: 'Ingresar contraseña'
     })
-        .min(6, {
-            message: 'La contraseña debe tener al menos 6 caracteres'
-        })
+        .min(1, { message: 'La contraseña no puede estar vacía' })
+        .min(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
 })
