@@ -1,6 +1,6 @@
 import Message from '../models/message.js';
 import Conversation from '../models/conversation.js';
-import AccessRestriction from '../models/AccessRestriction.js';
+import AccessRestriction from '../models/accessRestriction.js';
 
 export const getMessages = async (req, res) => {
     try {

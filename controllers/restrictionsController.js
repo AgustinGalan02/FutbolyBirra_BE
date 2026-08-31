@@ -1,4 +1,4 @@
-import AccessRestriction from '../models/AccessRestriction.js';
+import AccessRestriction from '../models/accessRestriction.js';
 
 export const getRestrictions = async (req, res) => {
     try {
