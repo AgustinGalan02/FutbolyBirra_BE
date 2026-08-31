@@ -6,6 +6,11 @@ import postRoutes from './routes/postRoute.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import commentRoutes from './routes/commentRoute.js';
+import messageRoutes from './routes/messageRoute.js';
+import conversationRoutes from './routes/conversationRoute.js';
+import restrictionsRoutes from './routes/restrictionsRoute.js';
+import friendsRoutes from './routes/friendsRoute.js';
+import notificationsRoutes from './routes/notificationsRoute.js';
 
 const app = express();
 
@@ -33,5 +38,10 @@ app.use("/api", authRoutes); //todas las rutas de auth empiezan con /api
 app.use("/api", categoryRoutes);
 app.use("/api", commentRoutes);
 app.use("/api", postRoutes);
+app.use("/api", messageRoutes);
+app.use("/api", conversationRoutes);
+app.use("/api", restrictionsRoutes);
+app.use("/api", friendsRoutes);
+app.use('/api', notificationsRoutes);
 
 export default app;
