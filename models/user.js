@@ -27,7 +27,32 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ['user', 'admin'],
         default: 'user'
-    }
-},{ timestamps: true })
+    },
+
+    // Lista de amigos ya aceptados
+    friends: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }
+    ],
+
+    // Solicitudes de amistad pendientes
+    friendRequests: [
+        {
+            from: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now
+            }
+        }
+    ]
+},
+    { timestamps: true }
+);
 
 export default mongoose.model('User', UserSchema)
