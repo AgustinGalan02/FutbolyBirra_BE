@@ -167,3 +167,20 @@ export const verifyToken = async (req, res) => { // OBTENEMOS EL TOKEN DE LAS CO
         });
     });
 };
+
+export const getUserByUsername = async (req, res) => {
+    try {
+        const { username } = req.params;
+
+        // Buscamos al usuario y excluimos la contraseña
+        const userFound = await User.findOne({ username }).select('-password');
+
+        if (!userFound) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        return res.json(userFound);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
