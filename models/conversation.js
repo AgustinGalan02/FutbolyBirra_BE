@@ -5,6 +5,15 @@ const conversationSchema = new mongoose.Schema({
         type: String,
         required: true
     }],
+    status: {
+        type: String,
+        enum: ['pending', 'accepted', 'rejected'],
+        default: 'accepted'
+    },
+    initiatedBy: {
+        type: String, // username del que envió el primer mensaje
+        required: true
+    },
     fechaUltimaActualizacion: {
         type: Date,
         default: Date.now
