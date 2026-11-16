@@ -32,7 +32,7 @@ export const getCategories = async (req, res) => {
           ...cat._doc,
           postCount,
           lastPostTitle: lastPost ? lastPost.title : null,
-          lastPostAuthor: lastPost ? lastPost.author.username : null,
+          lastPostAuthor: lastPost?.author?.username || "Usuario eliminado",
           lastPostDate: lastPost ? lastPost.createdAt : null,
         };
       })

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const registerSchema = z.object({
     username: z.string({
@@ -25,11 +25,17 @@ export const registerSchema = z.object({
         .min(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
         .max(50, { message: 'La contraseña no puede tener más de 50 caracteres' }),
     team: z.string({
-        required_error: "Tenés que elegir un equipo"
+        required_error: 'Tenés que elegir un equipo'
     })
-        .min(1, "Tenés que elegir un equipo"),
-    role: z.string().optional()
-})
+        .min(1, 'Tenés que elegir un equipo'),
+    role: z.enum(['user', 'moderator', 'admin']).optional(),
+
+    // Datos opcionales de la entidad Person
+    nombre: z.string().trim().max(60).optional(),
+    apellido: z.string().trim().max(60).optional(),
+    dni: z.string().trim().max(20).optional(),
+    fechaNacimiento: z.string().optional()
+});
 
 export const loginSchema = z.object({
     email: z.string({
@@ -44,4 +50,4 @@ export const loginSchema = z.object({
     })
         .min(1, { message: 'La contraseña no puede estar vacía' })
         .min(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
-})
+});

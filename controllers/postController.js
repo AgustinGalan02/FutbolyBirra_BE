@@ -1,11 +1,20 @@
 import Post from '../models/post.js';
 import Comment from "../models/comment.js";
 
+const authorPopulate = {
+    path: 'author',
+    select: 'username person',
+    populate: {
+        path: 'person',
+        select: 'nombre apellido team'
+    }
+};
+
 // GET
 export const getPosts = async (req, res) => {
     try {
         const posts = await Post.find()
-            .populate('author', 'username team')
+            .populate(authorPopulate)
             .populate('category', 'title');
         res.json(posts);
     } catch (error) {
@@ -17,9 +26,9 @@ export const getPostById = async (req, res) => {
     try {
         const { id } = req.params;
         const post = await Post.findById(id)
-        .populate('author', 'username team')
-        .populate('category', 'title'); 
-        
+            .populate(authorPopulate)
+            .populate('category', 'title');
+
         if (!post) return res.status(404).json({ message: "Post not found" });
         res.json(post);
     } catch (error) {
@@ -43,7 +52,7 @@ export const getPostsByCategory = async (req, res) => {
     try {
         const { categoryId } = req.params;
         const posts = await Post.find({ category: categoryId })
-            .populate('author', 'username team')
+            .populate(authorPopulate)
             .sort({ createdAt: -1 }); // los mas nuevos primero
         res.json(posts);
     } catch (error) {
@@ -71,25 +80,25 @@ export const createPost = async (req, res) => {
 
 // DELETE
 export const deletePost = async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post no encontrado" });
-    
-    if (post.author.toString() !== req.user.id) {
-        return res.status(403).json({ message: "No autorizado" });
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ message: "Post no encontrado" });
+
+        if (post.author.toString() !== req.user.id) {
+            return res.status(403).json({ message: "No autorizado" });
+        }
+
+        // --- BORRADO EN CASCADA ---
+        // Borra todos los comentarios donde el campo 'post' coincida con el ID del post actual
+        await Comment.deleteMany({ post: req.params.id });
+
+        // Ahora borramos el post
+        await Post.findByIdAndDelete(req.params.id);
+
+        return res.sendStatus(204);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
     }
-
-    // --- BORRADO EN CASCADA ---
-    // Borra todos los comentarios donde el campo 'post' coincida con el ID del post actual
-    await Comment.deleteMany({ post: req.params.id });
-
-    // Ahora borramos el post
-    await Post.findByIdAndDelete(req.params.id);
-
-    return res.sendStatus(204);
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
-  }
 };
 
 // PUT

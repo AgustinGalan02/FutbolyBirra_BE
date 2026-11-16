@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { authRequired } from '../middlewares/validateToken.js';
+import { authRequired } from '../middlewares/validateToken.js'; 
 import {
-    getFriendsData,
-    sendFriendRequest,
-    acceptFriendRequest,
-    rejectFriendRequest,
-    removeFriend
+  getFriendsData,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  removeFriend
 } from '../controllers/friendsController.js';
 
 const router = Router();

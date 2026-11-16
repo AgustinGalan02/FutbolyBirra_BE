@@ -1,64 +1,96 @@
 import User from '../models/user.js';
+import Person from '../models/person.js';
 import Notification from '../models/notification.js';
 
-
-// Obtener amigos y solicitudes pendientes del usuario logueado
+// Obtener amigos y solicitudes pendientes de la Persona logueada
 export const getFriendsData = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id)
-            .populate('friends', 'username team')
-            .populate('friendRequests.from', 'username team');
+        const currentPersonId = req.user.personId;
+        const person = await Person.findById(currentPersonId)
+            .populate('friends', 'nombre apellido team')
+            .populate('friendRequests.from', 'nombre apellido team');
 
-        if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+        if (!person) {
+            return res.status(404).json({ message: 'Perfil de persona no encontrado' });
         }
 
+        // Enriquecer con username desde User para mantener compatibilidad en la UI
+        const friendIds = person.friends.map((f) => f._id);
+        const requesterIds = person.friendRequests.map((r) => r.from?._id).filter(Boolean);
+        const allPersonIds = [...friendIds, ...requesterIds];
+
+        const usersMap = await User.find({ person: { $in: allPersonIds } }).select('person username');
+        const usernameByPersonId = new Map(
+            usersMap.map((u) => [u.person.toString(), u.username])
+        );
+
+        const friendsFormatted = person.friends.map((f) => ({
+            _id: f._id,
+            username: usernameByPersonId.get(f._id.toString()) || `${f.nombre} ${f.apellido}`.trim(),
+            team: f.team
+        }));
+
+        const requestsFormatted = person.friendRequests
+            .filter((r) => r.from)
+            .map((r) => ({
+                _id: r._id,
+                createdAt: r.createdAt,
+                from: {
+                    _id: r.from._id,
+                    username: usernameByPersonId.get(r.from._id.toString()) || `${r.from.nombre} ${r.from.apellido}`.trim(),
+                    team: r.from.team
+                }
+            }));
+
         return res.json({
-            friends: user.friends || [],
-            friendRequests: user.friendRequests || []
+            friends: friendsFormatted,
+            friendRequests: requestsFormatted
         });
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
 };
 
-// Enviar solicitud de amistad a otro usuario (por username)
+// Enviar solicitud de amistad a otra Persona (buscada por su username público)
 export const sendFriendRequest = async (req, res) => {
     try {
         const { targetUsername } = req.params;
-        const currentUserId = req.user.id;
+        const currentPersonId = req.user.personId;
 
         const targetUser = await User.findOne({ username: targetUsername });
-        if (!targetUser) {
+        if (!targetUser || !targetUser.person) {
             return res.status(404).json({ message: 'Usuario destinatario no encontrado' });
         }
 
-        // Validar que no se agregue a sí mismo
-        if (targetUser._id.toString() === currentUserId) {
+        const targetPersonId = targetUser.person.toString();
+
+        if (targetPersonId === String(currentPersonId)) {
             return res.status(400).json({ message: 'No podés enviarte una solicitud a vos mismo' });
         }
 
-        // Validar si ya son amigos
-        if (targetUser.friends.includes(currentUserId)) {
+        const targetPerson = await Person.findById(targetPersonId);
+        if (!targetPerson) {
+            return res.status(404).json({ message: 'Perfil destinatario no encontrado' });
+        }
+
+        if (targetPerson.friends.some((id) => id.toString() === String(currentPersonId))) {
             return res.status(400).json({ message: 'Ya son amigos' });
         }
 
-        // Validar si ya le envió una solicitud previamente
-        const alreadyRequested = targetUser.friendRequests.some(
-            (req) => req.from.toString() === currentUserId
+        const alreadyRequested = targetPerson.friendRequests.some(
+            (r) => r.from.toString() === String(currentPersonId)
         );
 
         if (alreadyRequested) {
-            return res.status(400).json({ message: 'Ya enviaste una solicitud a este usuario' });
+            return res.status(400).json({ message: 'Ya enviaste una solicitud a esta persona' });
         }
 
-        // Agregar la solicitud al destinatario
-        targetUser.friendRequests.push({ from: currentUserId });
-        await targetUser.save();
+        targetPerson.friendRequests.push({ from: currentPersonId });
+        await targetPerson.save();
 
         await Notification.create({
-            recipient: targetUser._id,
-            sender: currentUserId,
+            recipient: targetPersonId,
+            sender: currentPersonId,
             type: 'friend_request'
         });
 
@@ -68,41 +100,38 @@ export const sendFriendRequest = async (req, res) => {
     }
 };
 
-// Aceptar solicitud de amistad
+// Aceptar solicitud de amistad (senderId es el personId del remitente)
 export const acceptFriendRequest = async (req, res) => {
     try {
         const { senderId } = req.params;
-        const currentUserId = req.user.id;
+        const currentPersonId = req.user.personId;
 
-        const currentUser = await User.findById(currentUserId);
-        const senderUser = await User.findById(senderId);
+        const currentPerson = await Person.findById(currentPersonId);
+        const senderPerson = await Person.findById(senderId);
 
-        if (!currentUser || !senderUser) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+        if (!currentPerson || !senderPerson) {
+            return res.status(404).json({ message: 'Persona no encontrada' });
         }
 
-        // Verificar que exista la solicitud en la lista del usuario actual
-        const requestIndex = currentUser.friendRequests.findIndex(
+        const requestIndex = currentPerson.friendRequests.findIndex(
             (r) => r.from.toString() === senderId
         );
 
         if (requestIndex === -1) {
-            return res.status(400).json({ message: 'No hay ninguna solicitud de este usuario' });
+            return res.status(400).json({ message: 'No hay ninguna solicitud de esta persona' });
         }
 
-        // Remover la solicitud de la lista
-        currentUser.friendRequests.splice(requestIndex, 1);
+        currentPerson.friendRequests.splice(requestIndex, 1);
 
-        // Agregar mutuamente como amigos si no están ya en la lista
-        if (!currentUser.friends.includes(senderId)) {
-            currentUser.friends.push(senderId);
+        if (!currentPerson.friends.some((id) => id.toString() === senderId)) {
+            currentPerson.friends.push(senderId);
         }
-        if (!senderUser.friends.includes(currentUserId)) {
-            senderUser.friends.push(currentUserId);
+        if (!senderPerson.friends.some((id) => id.toString() === String(currentPersonId))) {
+            senderPerson.friends.push(currentPersonId);
         }
 
-        await currentUser.save();
-        await senderUser.save();
+        await currentPerson.save();
+        await senderPerson.save();
 
         return res.json({ message: 'Solicitud aceptada correctamente' });
     } catch (error) {
@@ -114,19 +143,18 @@ export const acceptFriendRequest = async (req, res) => {
 export const rejectFriendRequest = async (req, res) => {
     try {
         const { senderId } = req.params;
-        const currentUserId = req.user.id;
+        const currentPersonId = req.user.personId;
 
-        const currentUser = await User.findById(currentUserId);
-        if (!currentUser) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+        const currentPerson = await Person.findById(currentPersonId);
+        if (!currentPerson) {
+            return res.status(404).json({ message: 'Persona no encontrada' });
         }
 
-        // Filtrar y remover la solicitud
-        currentUser.friendRequests = currentUser.friendRequests.filter(
+        currentPerson.friendRequests = currentPerson.friendRequests.filter(
             (r) => r.from.toString() !== senderId
         );
 
-        await currentUser.save();
+        await currentPerson.save();
 
         return res.json({ message: 'Solicitud rechazada' });
     } catch (error) {
@@ -138,25 +166,23 @@ export const rejectFriendRequest = async (req, res) => {
 export const removeFriend = async (req, res) => {
     try {
         const { friendId } = req.params;
-        const currentUserId = req.user.id;
+        const currentPersonId = req.user.personId;
 
-        const currentUser = await User.findById(currentUserId);
-        const targetFriend = await User.findById(friendId);
+        const currentPerson = await Person.findById(currentPersonId);
+        const targetFriend = await Person.findById(friendId);
 
-        if (!currentUser) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+        if (!currentPerson) {
+            return res.status(404).json({ message: 'Persona no encontrada' });
         }
 
-        // Remover de la lista del usuario actual
-        currentUser.friends = currentUser.friends.filter(
+        currentPerson.friends = currentPerson.friends.filter(
             (id) => id.toString() !== friendId
         );
-        await currentUser.save();
+        await currentPerson.save();
 
-        // Remover también del perfil del amigo (relación bidireccional)
         if (targetFriend) {
             targetFriend.friends = targetFriend.friends.filter(
-                (id) => id.toString() !== currentUserId
+                (id) => id.toString() !== String(currentPersonId)
             );
             await targetFriend.save();
         }

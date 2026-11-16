@@ -1,4 +1,5 @@
 import User from '../models/user.js';
+import Person from '../models/person.js';
 import bcrypt from 'bcryptjs';
 import { createAccessToken } from '../libs/jwt.js'
 import jwt from 'jsonwebtoken';
@@ -16,55 +17,69 @@ const getCookieOptions = () => ({
 });
 
 export const register = async (req, res) => {
-    const { username, email, password, team } = req.body;
+    const { username, email, password, team, nombre, apellido, dni, fechaNacimiento } = req.body;
 
     try {
-
         const userFound = await User.findOne({ email });
         if (userFound) {
             return res.status(400).json([{
-                field: "email",
-                message: "Email ya registrado"
-            }])
+                field: 'email',
+                message: 'Email ya registrado'
+            }]);
         }
 
         const usernameFound = await User.findOne({ username });
         if (usernameFound) {
             return res.status(400).json([{
-                field: "username",
-                message: "Usuario ya registrado"
-            }])
+                field: 'username',
+                message: 'Usuario ya registrado'
+            }]);
         }
 
+        // 1. CREAR ENTIDAD PERSONA (Datos de negocio / perfil)
+        const newPerson = new Person({
+            nombre: nombre || '',
+            apellido: apellido || '',
+            dni: dni || undefined,
+            fechaNacimiento: fechaNacimiento || undefined,
+            team: team || 'Neutral'
+        });
+        const personSaved = await newPerson.save();
 
-        // ENCRIPTAMOS
-        const passwordHash = await bcrypt.hash(password, 10)
+        // 2. ENCRIPTAR CONTRASEÑA Y CREAR USUARIO (Módulo de Seguridad)
+        const passwordHash = await bcrypt.hash(password, 10);
 
-        // CREAMOS USUARIO
         const newUser = new User({
+            person: personSaved._id,
             username,
             email,
-            password: passwordHash,
-            team
+            password: passwordHash
         });
         const userSaved = await newUser.save();
 
-        // GENERAMOS TOKEN CON EL ID
-        const token = await createAccessToken({ id: userSaved._id, role: userSaved.role });
-
-        // GUARDAMOS TOKEN EN UNA COOKIE
+        // 3. GENERAR TOKEN CON ID DE USUARIO, ID DE PERSONA Y ROL
+        const token = await createAccessToken({
+            id: userSaved._id,
+            personId: personSaved._id,
+            username: userSaved.username,
+            role: userSaved.role
+        });
         res.cookie('token', token, getCookieOptions());
 
-        res.json({ // devuelve solo datos necesarios del usuario
+        return res.json({
             id: userSaved._id,
+            personId: personSaved._id,
             username: userSaved.username,
             email: userSaved.email,
+            role: userSaved.role,
+            team: personSaved.team,
+            nombre: personSaved.nombre,
+            apellido: personSaved.apellido,
             createdAt: userSaved.createdAt,
-            updateAt: userSaved.updatedAt,
-            team: userSaved.team
+            updatedAt: userSaved.updatedAt
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 };
 
@@ -72,98 +87,114 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // BUSCAMOS USUARIO
-        const userFound = await User.findOne({ email });
-        if (!userFound) return res.status(400).json([{
-            field: 'email',
-            message: 'Email no registrado'
-        }]);
+        const userFound = await User.findOne({ email }).populate('person');
+        if (!userFound) {
+            return res.status(400).json([{
+                field: 'email',
+                message: 'Email no registrado'
+            }]);
+        }
 
+        // Verificar si la cuenta fue inhabilitada definitivamente (Baneo permanente)
+        if (userFound.active === false) {
+            return res.status(403).json([{
+                field: 'email',
+                message: 'Esta cuenta ha sido inhabilitada definitivamente'
+            }]);
+        }
 
-        // COMPARAMOS CONTRASEÑA CON EL TOKEN
         const isMatch = await bcrypt.compare(password, userFound.password);
+        if (!isMatch) {
+            return res.status(400).json([{
+                field: 'password',
+                message: 'Contraseña Incorrecta'
+            }]);
+        }
 
-        if (!isMatch) return res.status(400).json([{
-            field: 'password',
-            message: 'Contraseña Incorrecta'
-        }]);
+        const personId = userFound.person?._id || null;
 
-        // GENERAMOS TOKEN CON EL ID
-        const token = await createAccessToken({ id: userFound._id, role: userFound.role });
+        const token = await createAccessToken({
+            id: userFound._id,
+            personId,
+            username: userFound.username,
+            role: userFound.role
+        });
 
-        // GUARDAMOS TOKEN EN UNA COOKIE
         res.cookie('token', token, getCookieOptions());
 
-        res.json({
+        return res.json({
             id: userFound._id,
+            personId,
             username: userFound.username,
             email: userFound.email,
-            team: userFound.team,
             role: userFound.role,
+            team: userFound.person?.team || 'Neutral',
+            nombre: userFound.person?.nombre || '',
+            apellido: userFound.person?.apellido || '',
             createdAt: userFound.createdAt,
             updatedAt: userFound.updatedAt
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 };
 
 export const logout = (req, res) => {
-    // VACIAMOS LA COOKIE
     res.cookie('token', '', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        // PARA QUE CADUQUE INMEDIATAMENTE
         expires: new Date(0)
     });
 
-    //OK
     return res.sendStatus(200);
 };
 
 export const profile = async (req, res) => {
     try {
-        // Buscamos al usuario por el id que dio la funcion authRequired
-        const userFound = await User.findById(req.user.id);
+        const userFound = await User.findById(req.user.id).populate('person');
 
         if (!userFound) {
             return res.status(400).json({ message: 'User not found' });
         }
 
-        // Si todo sale bien, devolvemos los datos
         return res.json({
             id: userFound._id,
+            personId: userFound.person?._id || null,
             username: userFound.username,
             email: userFound.email,
-            team: userFound.team,
             role: userFound.role,
+            team: userFound.person?.team || 'Neutral',
+            nombre: userFound.person?.nombre || '',
+            apellido: userFound.person?.apellido || '',
             createdAt: userFound.createdAt,
             updatedAt: userFound.updatedAt
         });
-
     } catch (error) {
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 };
 
-export const verifyToken = async (req, res) => { // OBTENEMOS EL TOKEN DE LAS COOKIES
+export const verifyToken = async (req, res) => {
     const { token } = req.cookies;
 
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
-    jwt.verify(token, secretKey, async (err, user) => {
+    jwt.verify(token, secretKey, async (err, decoded) => {
         if (err) return res.status(401).json({ message: 'Unauthorized' });
 
-        const userFound = await User.findById(user.id);
-        if (!userFound) return res.status(401).json({ message: 'Unauthorized' });
+        const userFound = await User.findById(decoded.id).populate('person');
+        if (!userFound || userFound.active === false) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
 
         return res.json({
             id: userFound._id,
+            personId: userFound.person?._id || null,
             username: userFound.username,
             email: userFound.email,
-            team: userFound.team,
-            role: userFound.role
+            role: userFound.role,
+            team: userFound.person?.team || 'Neutral'
         });
     });
 };
@@ -172,14 +203,23 @@ export const getUserByUsername = async (req, res) => {
     try {
         const { username } = req.params;
 
-        // Buscamos al usuario y excluimos la contraseña
-        const userFound = await User.findOne({ username }).select('-password');
+        const userFound = await User.findOne({ username })
+            .select('-password')
+            .populate('person');
 
         if (!userFound) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        return res.json(userFound);
+        return res.json({
+            id: userFound._id,
+            personId: userFound.person?._id || null,
+            username: userFound.username,
+            email: userFound.email,
+            role: userFound.role,
+            team: userFound.person?.team || 'Neutral',
+            person: userFound.person
+        });
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }

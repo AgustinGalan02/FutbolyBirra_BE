@@ -3,6 +3,14 @@ import Notification from '../models/notification.js';
 import Post from '../models/post.js';
 import User from '../models/user.js';
 
+const authorPopulate = {
+    path: 'author',
+    select: 'username person',
+    populate: {
+        path: 'person',
+        select: 'nombre apellido team'
+    }
+};
 
 // POST
 export const createComment = async (req, res) => {
@@ -21,7 +29,7 @@ export const createComment = async (req, res) => {
 
         // 2. Poblar datos del autor para el frontend
         const populatedComment = await Comment.findById(savedComment._id)
-            .populate('author', 'username team');
+            .populate(authorPopulate);
 
         // 3. Crear las Notificaciones de forma no bloqueante
         try {
@@ -87,7 +95,7 @@ export const getCommentsByPost = async (req, res) => {
     try {
         const { postId } = req.params;
         const comments = await Comment.find({ post: postId })
-            .populate('author', 'username team')
+            .populate(authorPopulate)
             .sort({ createdAt: 1 }); // orden: mas viejo a mas nuevo
         res.json(comments);
     } catch (error) {

@@ -11,6 +11,7 @@ import conversationRoutes from './routes/conversationRoute.js';
 import restrictionsRoutes from './routes/restrictionsRoute.js';
 import friendsRoutes from './routes/friendsRoute.js';
 import notificationsRoutes from './routes/notificationsRoute.js';
+import reportRoutes from './routes/reportRoute.js';
 
 const app = express();
 
@@ -43,5 +44,6 @@ app.use("/api", conversationRoutes);
 app.use("/api", restrictionsRoutes);
 app.use("/api", friendsRoutes);
 app.use('/api', notificationsRoutes);
+app.use('/api', reportRoutes);
 
 export default app;
