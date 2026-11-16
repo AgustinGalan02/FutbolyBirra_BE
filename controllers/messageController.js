@@ -3,6 +3,7 @@ import Conversation from '../models/conversation.js';
 import AccessRestriction from '../models/accessRestriction.js';
 import User from '../models/user.js';
 import { emitToUser } from '../socket.js';
+import { encryptMessage, decryptMessage } from '../utils/crypto.js';
 
 export const getMessages = async (req, res) => {
     try {
@@ -25,7 +26,13 @@ export const getMessages = async (req, res) => {
             { $set: { leido: true } }
         );
 
-        return res.json(messages);
+        // Desencriptar los mensajes antes de enviarlos al frontend
+        const decryptedMessages = messages.map((msg) => ({
+            ...msg.toObject(),
+            content: decryptMessage(msg.content)
+        }));
+
+        return res.json(decryptedMessages);
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
@@ -37,18 +44,21 @@ export const sendMessage = async (req, res) => {
         const senderPersonId = req.user.personId;
         const { receiver, content, conversationId } = req.body;
 
+        if (!content || !content.trim()) {
+            return res.status(400).json({ message: 'El mensaje no puede estar vacío' });
+        }
+
         if (sender === receiver) {
             return res.status(400).json({ message: 'No puedes enviarte mensajes a ti mismo' });
         }
 
-        // Obtener el personId del destinatario
         const receiverUser = await User.findOne({ username: receiver });
         if (!receiverUser || !receiverUser.person) {
             return res.status(404).json({ message: 'Destinatario no encontrado' });
         }
         const receiverPersonId = receiverUser.person;
 
-        // 1. Validar si la persona emisora tiene una sanción disciplinaria vigente
+        // 1. Validar sanción disciplinaria vigente
         const ahora = new Date();
         const sancionActiva = await AccessRestriction.findOne({
             personTarget: senderPersonId,
@@ -102,22 +112,29 @@ export const sendMessage = async (req, res) => {
             await conversation.save();
         }
 
+        // Guardar el contenido ENCRIPTADO
         const newMessage = new Message({
             conversationId: conversation._id,
             sender,
             receiver,
-            content
+            content: encryptMessage(content.trim())
         });
 
         const savedMessage = await newMessage.save();
 
+        // texto plano desencriptado para enviar al frontend y al socket
+        const plainMessage = {
+            ...savedMessage.toObject(),
+            content: content.trim()
+        };
+
         emitToUser(receiverUser._id, 'new_message', {
-            message: savedMessage,
+            message: plainMessage,
             conversationId: conversation._id
         });
-        
+
         return res.status(201).json({
-            message: savedMessage,
+            message: plainMessage,
             conversationId: conversation._id
         });
     } catch (error) {
