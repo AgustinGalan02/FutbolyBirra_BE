@@ -2,6 +2,7 @@ import Message from '../models/message.js';
 import Conversation from '../models/conversation.js';
 import AccessRestriction from '../models/accessRestriction.js';
 import User from '../models/user.js';
+import { emitToUser } from '../socket.js';
 
 export const getMessages = async (req, res) => {
     try {
@@ -110,6 +111,11 @@ export const sendMessage = async (req, res) => {
 
         const savedMessage = await newMessage.save();
 
+        emitToUser(receiverUser._id, 'new_message', {
+            message: savedMessage,
+            conversationId: conversation._id
+        });
+        
         return res.status(201).json({
             message: savedMessage,
             conversationId: conversation._id

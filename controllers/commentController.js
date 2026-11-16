@@ -2,6 +2,7 @@ import Comment from '../models/comment.js';
 import Notification from '../models/notification.js';
 import Post from '../models/post.js';
 import User from '../models/user.js';
+import { emitToUser } from '../socket.js';
 
 const authorPopulate = {
     path: 'author',
@@ -31,7 +32,7 @@ export const createComment = async (req, res) => {
         const populatedComment = await Comment.findById(savedComment._id)
             .populate(authorPopulate);
 
-        // 3. Crear las Notificaciones de forma no bloqueante
+        // 3. Crear y emitir las Notificaciones en tiempo real de forma no bloqueante
         try {
             const currentPost = await Post.findById(post);
             const postId = currentPost?._id || post;
@@ -43,22 +44,34 @@ export const createComment = async (req, res) => {
                 const parentAuthorId = (parent?.author || parent?.user)?._id?.toString() || (parent?.author || parent?.user)?.toString();
 
                 if (parentAuthorId && parentAuthorId !== req.user.id) {
-                    await Notification.create({
+                    const notif = await Notification.create({
                         recipient: parentAuthorId,
                         sender: req.user.id,
                         type: 'comment_reply',
                         post: postId
                     });
+
+                    const populatedNotif = await notif.populate([
+                        { path: 'sender', select: 'username' },
+                        { path: 'post', select: 'title' }
+                    ]);
+                    emitToUser(parentAuthorId, 'new_notification', populatedNotif);
                 }
             } else {
                 // Notificar al dueño del post
                 if (postOwnerId && postOwnerId !== req.user.id) {
-                    await Notification.create({
+                    const notif = await Notification.create({
                         recipient: postOwnerId,
                         sender: req.user.id,
                         type: 'post_comment',
                         post: postId
                     });
+
+                    const populatedNotif = await notif.populate([
+                        { path: 'sender', select: 'username' },
+                        { path: 'post', select: 'title' }
+                    ]);
+                    emitToUser(postOwnerId, 'new_notification', populatedNotif);
                 }
             }
 
@@ -71,12 +84,18 @@ export const createComment = async (req, res) => {
                 for (const targetUser of mentionedUsers) {
                     const targetUserId = targetUser._id.toString();
                     if (targetUserId !== req.user.id) {
-                        await Notification.create({
+                        const notif = await Notification.create({
                             recipient: targetUserId,
                             sender: req.user.id,
                             type: 'comment_reply',
                             post: postId
                         });
+
+                        const populatedNotif = await notif.populate([
+                            { path: 'sender', select: 'username' },
+                            { path: 'post', select: 'title' }
+                        ]);
+                        emitToUser(targetUserId, 'new_notification', populatedNotif);
                     }
                 }
             }
@@ -122,7 +141,7 @@ export const deleteComment = async (req, res) => {
         const comment = await Comment.findById(req.params.id);
         if (!comment) return res.status(404).json({ message: "Comentario no encontrado" });
 
-        if (comment.author.toString() !== req.user.id && req.user.role !== 'admin') {
+        if (comment.author.toString() !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'moderator') {
             return res.status(403).json({ message: "No tenés permiso" });
         }
 
@@ -138,5 +157,4 @@ export const deleteComment = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-
 };

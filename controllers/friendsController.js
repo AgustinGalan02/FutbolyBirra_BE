@@ -1,6 +1,7 @@
 import User from '../models/user.js';
 import Person from '../models/person.js';
 import Notification from '../models/notification.js';
+import { emitToUser } from '../socket.js';
 
 // Obtener amigos y solicitudes pendientes de la Persona logueada
 export const getFriendsData = async (req, res) => {
@@ -88,10 +89,15 @@ export const sendFriendRequest = async (req, res) => {
         targetPerson.friendRequests.push({ from: currentPersonId });
         await targetPerson.save();
 
-        await Notification.create({
-            recipient: targetPersonId,
-            sender: currentPersonId,
+        const notif = await Notification.create({
+            recipient: targetUser._id,
+            sender: req.user.id,
             type: 'friend_request'
+        });
+
+        emitToUser(targetUser._id, 'new_notification', {
+            ...notif.toObject(),
+            sender: { _id: req.user.id, username: req.user.username }
         });
 
         return res.json({ message: 'Solicitud de amistad enviada con éxito' });
