@@ -12,16 +12,16 @@ const PersonSchema = new mongoose.Schema(
             trim: true,
             default: ''
         },
-        dni: {
-            type: String,
-            trim: true
-        },
         fechaNacimiento: {
             type: Date
         },
         team: {
             type: String,
             default: 'Neutral'
+        },
+        avatar: {
+            type: String,
+            default: ''
         },
         friends: [
             {

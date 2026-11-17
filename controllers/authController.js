@@ -131,6 +131,7 @@ export const login = async (req, res) => {
             team: userFound.person?.team || 'Neutral',
             nombre: userFound.person?.nombre || '',
             apellido: userFound.person?.apellido || '',
+            avatar: userFound.person?.avatar || '',
             createdAt: userFound.createdAt,
             updatedAt: userFound.updatedAt
         });
@@ -167,6 +168,7 @@ export const profile = async (req, res) => {
             team: userFound.person?.team || 'Neutral',
             nombre: userFound.person?.nombre || '',
             apellido: userFound.person?.apellido || '',
+            avatar: userFound.person?.avatar || '',
             createdAt: userFound.createdAt,
             updatedAt: userFound.updatedAt
         });
@@ -194,7 +196,9 @@ export const verifyToken = async (req, res) => {
             username: userFound.username,
             email: userFound.email,
             role: userFound.role,
-            team: userFound.person?.team || 'Neutral'
+            team: userFound.person?.team || 'Neutral',
+            avatar: userFound.person?.avatar || '',
+            createdAt: userFound.createdAt
         });
     });
 };
@@ -218,8 +222,39 @@ export const getUserByUsername = async (req, res) => {
             email: userFound.email,
             role: userFound.role,
             team: userFound.person?.team || 'Neutral',
-            person: userFound.person
+            person: userFound.person,
+            avatar: userFound.person?.avatar || '',
+            createdAt: userFound.createdAt
         });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+export const updateAvatar = async (req, res) => {
+    try {
+        const { avatar } = req.body;
+
+        if (typeof avatar !== 'string') {
+            return res.status(400).json({ message: 'Imagen inválida' });
+        }
+
+        // Límite preventivo (~350 KB en base64)
+        if (avatar.length > 500000) {
+            return res.status(400).json({ message: 'La imagen es demasiado pesada' });
+        }
+
+        const personUpdated = await Person.findByIdAndUpdate(
+            req.user.personId,
+            { avatar },
+            { new: true }
+        );
+
+        if (!personUpdated) {
+            return res.status(404).json({ message: 'Perfil no encontrado' });
+        }
+
+        return res.json({ avatar: personUpdated.avatar });
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
